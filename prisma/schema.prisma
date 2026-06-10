@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id              String     @id @default(cuid())
+  nom             String
+  prenom          String
+  telephone       String?
+  email           String?    @unique
+  dateInscription DateTime   @default(now())
+  sessions        Session[]
+  paiements       Paiement[]
+
+  @@map("clients")
+}
+
+model Machine {
+  id        String    @id @default(cuid())
+  nom       String
+  type      String
+  prixHeure Float
+  statut    String    @default("DISPONIBLE")
+  tvMac     String?
+  tvIp      String?
+  tvToken   String?
+  sessions  Session[]
+
+  @@map("machines")
+}
+
+model Session {
+  id           String    @id @default(cuid())
+  clientId     String
+  client       Client    @relation(fields: [clientId], references: [id])
+  machineId    String
+  machine      Machine   @relation(fields: [machineId], references: [id])
+  debut        DateTime  @default(now())
+  fin          DateTime?
+  dureePrevu   Int?
+  dureeMinutes Int?
+  montant      Float?
+  statut       String    @default("EN_COURS")
+  paiement     Paiement?
+  createdAt    DateTime  @default(now())
+
+  @@map("sessions")
+}
+
+model Paiement {
+  id               String   @id @default(cuid())
+  sessionId        String   @unique
+  session          Session  @relation(fields: [sessionId], references: [id])
+  clientId         String
+  client           Client   @relation(fields: [clientId], references: [id])
+  montant          Float
+  methode          String
+  statut           String   @default("EN_ATTENTE")
+  referenceFeexPay String?
+  tokenFeexPay     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("paiements")
+}

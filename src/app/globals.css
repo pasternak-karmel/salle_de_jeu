@@ -1,0 +1,247 @@
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Russo+One&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens ─────────────────────────────────────────── */
+:root {
+  --bg-void:       #0F0F23;
+  --bg-surface:    #0A0A18;
+  --bg-card:       #131326;
+  --bg-raised:     #1C1C3A;
+
+  --border-dim:    rgba(124, 58, 237, 0.1);
+  --border-subtle: rgba(124, 58, 237, 0.22);
+  --border-glow:   rgba(167, 139, 250, 0.55);
+
+  --glow-purple: 0 0 22px rgba(124,58,237,0.28), 0 0 44px rgba(124,58,237,0.08);
+  --glow-cyan:   0 0 20px rgba(6,182,212,0.22),  0 0 40px rgba(6,182,212,0.07);
+  --glow-rose:   0 0 20px rgba(244,63,94,0.22),  0 0 40px rgba(244,63,94,0.07);
+  --glow-amber:  0 0 18px rgba(245,158,11,0.2);
+  --glow-green:  0 0 16px rgba(16,185,129,0.18);
+}
+
+/* ── Base ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  background-color: var(--bg-void);
+  background-image: radial-gradient(rgba(124, 58, 237, 0.055) 1px, transparent 1px);
+  background-size: 28px 28px;
+  color: #E2E8F0;
+  font-family: 'Chakra Petch', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .font-display {
+  font-family: 'Russo One', sans-serif;
+  letter-spacing: 0.01em;
+}
+
+/* ── Cards ─────────────────────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  @apply rounded-xl p-5;
+}
+
+.card-glow {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--glow-purple);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+  @apply rounded-xl p-5;
+}
+.card-glow:hover {
+  border-color: rgba(167, 139, 250, 0.4);
+  box-shadow: 0 0 32px rgba(124,58,237,0.38), 0 0 64px rgba(124,58,237,0.12);
+}
+
+/* Status card variants */
+.card-cyan {
+  background: linear-gradient(140deg, rgba(6,182,212,0.07) 0%, var(--bg-card) 55%);
+  border: 1px solid rgba(6,182,212,0.28);
+  box-shadow: var(--glow-cyan);
+  @apply rounded-xl p-5;
+}
+.card-purple {
+  background: linear-gradient(140deg, rgba(124,58,237,0.1) 0%, var(--bg-card) 55%);
+  border: 1px solid rgba(124,58,237,0.32);
+  box-shadow: var(--glow-purple);
+  @apply rounded-xl p-5;
+}
+.card-amber {
+  background: linear-gradient(140deg, rgba(245,158,11,0.07) 0%, var(--bg-card) 55%);
+  border: 1px solid rgba(245,158,11,0.26);
+  box-shadow: var(--glow-amber);
+  @apply rounded-xl p-5;
+}
+
+/* ── Buttons ───────────────────────────────────────────────── */
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 font-medium px-4 py-2 rounded-lg transition-all duration-200 text-white cursor-pointer select-none;
+  font-family: 'Chakra Petch', sans-serif;
+  background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+  box-shadow: 0 0 14px rgba(124,58,237,0.4), 0 2px 8px rgba(0,0,0,0.3);
+}
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 0 24px rgba(124,58,237,0.6), 0 4px 14px rgba(0,0,0,0.4);
+  transform: translateY(-1px);
+}
+.btn-primary:active:not(:disabled) { transform: translateY(0); }
+.btn-primary:disabled  { opacity: 0.45; cursor: not-allowed; }
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 font-medium px-4 py-2 rounded-lg transition-all duration-200 cursor-pointer select-none;
+  font-family: 'Chakra Petch', sans-serif;
+  background: rgba(28, 28, 58, 0.8);
+  border: 1px solid rgba(124,58,237,0.28);
+  color: #A78BFA;
+}
+.btn-secondary:hover:not(:disabled) {
+  border-color: rgba(167,139,250,0.5);
+  background: rgba(28, 28, 58, 1);
+  color: #C4B5FD;
+}
+.btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-danger {
+  @apply inline-flex items-center justify-center gap-2 font-medium px-4 py-2 rounded-lg transition-all duration-200 text-white cursor-pointer select-none;
+  font-family: 'Chakra Petch', sans-serif;
+  background: linear-gradient(135deg, #F43F5E 0%, #E11D48 100%);
+  box-shadow: 0 0 14px rgba(244,63,94,0.35), 0 2px 8px rgba(0,0,0,0.3);
+}
+.btn-danger:hover:not(:disabled) {
+  box-shadow: 0 0 24px rgba(244,63,94,0.55), 0 4px 14px rgba(0,0,0,0.4);
+  transform: translateY(-1px);
+}
+.btn-danger:active:not(:disabled) { transform: translateY(0); }
+.btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Inputs ────────────────────────────────────────────────── */
+.input {
+  @apply rounded-lg px-3 py-2.5 w-full outline-none transition-all duration-200;
+  background: rgba(10, 10, 24, 0.8);
+  border: 1px solid rgba(124,58,237,0.22);
+  color: #E2E8F0;
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 0.875rem;
+}
+.input::placeholder { color: #4B5563; }
+.input:focus {
+  border-color: rgba(167,139,250,0.6);
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.12), 0 0 14px rgba(124,58,237,0.18);
+}
+select.input { cursor: pointer; }
+
+/* ── Badges ────────────────────────────────────────────────── */
+.badge {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium;
+  font-family: 'Chakra Petch', sans-serif;
+  letter-spacing: 0.03em;
+}
+.badge::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.badge-green  {
+  background: rgba(16,185,129,0.1);
+  color: #10B981;
+  border: 1px solid rgba(16,185,129,0.28);
+}
+.badge-green::before  { background: #10B981; }
+
+.badge-red    {
+  background: rgba(244,63,94,0.1);
+  color: #F43F5E;
+  border: 1px solid rgba(244,63,94,0.28);
+}
+.badge-red::before    { background: #F43F5E; }
+
+.badge-yellow {
+  background: rgba(245,158,11,0.1);
+  color: #F59E0B;
+  border: 1px solid rgba(245,158,11,0.28);
+}
+.badge-yellow::before { background: #F59E0B; }
+
+.badge-blue   {
+  background: rgba(6,182,212,0.1);
+  color: #06B6D4;
+  border: 1px solid rgba(6,182,212,0.28);
+}
+.badge-blue::before   { background: #06B6D4; }
+
+.badge-purple {
+  background: rgba(124,58,237,0.12);
+  color: #A78BFA;
+  border: 1px solid rgba(124,58,237,0.32);
+}
+.badge-purple::before { background: #A78BFA; }
+
+/* ── Data tables ───────────────────────────────────────────── */
+.data-table { @apply w-full text-sm; }
+.data-table thead tr {
+  border-bottom: 1px solid rgba(124,58,237,0.14);
+}
+.data-table thead th {
+  @apply text-left px-4 py-3 text-xs uppercase;
+  color: #6B7280;
+  font-family: 'Chakra Petch', sans-serif;
+  letter-spacing: 0.1em;
+}
+.data-table tbody tr {
+  border-bottom: 1px solid rgba(124,58,237,0.07);
+  transition: background 0.15s ease;
+}
+.data-table tbody tr:hover {
+  background: rgba(124,58,237,0.06);
+}
+.data-table tbody td { @apply px-4 py-3; }
+.data-table tbody tr:last-child { border-bottom: none; }
+
+/* ── Sidebar nav ───────────────────────────────────────────── */
+.nav-item {
+  @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer;
+  font-family: 'Chakra Petch', sans-serif;
+  color: #6B7280;
+}
+.nav-item:hover {
+  color: #A78BFA;
+  background: rgba(124,58,237,0.08);
+}
+.nav-active {
+  color: #C4B5FD !important;
+  background: linear-gradient(90deg, rgba(124,58,237,0.18) 0%, rgba(124,58,237,0.04) 100%) !important;
+  border-left: 2px solid #7C3AED;
+  box-shadow: inset 0 0 20px rgba(124,58,237,0.08);
+  padding-left: calc(0.75rem - 2px) !important;
+}
+
+/* ── Dividers ──────────────────────────────────────────────── */
+.neon-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(124,58,237,0.4), transparent);
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-void); }
+::-webkit-scrollbar-thumb {
+  background: rgba(124,58,237,0.35);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(167,139,250,0.55); }
+
+/* ── Misc ──────────────────────────────────────────────────── */
+.section-title {
+  @apply text-xs uppercase tracking-widest font-medium mb-3;
+  color: #6B7280;
+  font-family: 'Chakra Petch', sans-serif;
+  letter-spacing: 0.12em;
+}
