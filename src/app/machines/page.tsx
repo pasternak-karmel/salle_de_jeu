@@ -1,11 +1,11 @@
-import { prisma } from "@/lib/prisma";
-import MachinesClient from "./MachinesClient";
+import { prisma } from '@/lib/prisma';
+import MachinesClient from './MachinesClient';
 
 export const revalidate = 0;
 
 export default async function MachinesPage() {
   const machines = await prisma.machine.findMany({
-    orderBy: [{ statut: "asc" }, { nom: "asc" }],
+    orderBy: [{ statut: 'asc' }, { nom: 'asc' }],
     select: {
       id: true,
       nom: true,
@@ -15,8 +15,7 @@ export default async function MachinesPage() {
       tvMac: true,
       tvIp: true,
       sessions: {
-        where: { statut: "EN_COURS" },
-        include: { client: { select: { nom: true, prenom: true } } },
+        where: { statut: 'EN_COURS' },
         take: 1,
       },
     },

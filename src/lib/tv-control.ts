@@ -31,9 +31,6 @@ export async function wakeOnLan(mac: string): Promise<void> {
 // ─── Samsung Legacy TCP (port 55000) ────────────────────────────────────────
 
 const APP_NAME = 'GamingManager';
-// FIX: APP_ID doit matcher ce que la TV renvoie dans ses messages de réponse.
-// La TV répond toujours avec 'iapp.samsung' comme app string — on utilise donc
-// cette valeur pour identifier NOS messages dans parseMessages().
 const APP_ID = 'iapp.samsung';
 
 function packString(s: Buffer | string): Buffer {
@@ -43,9 +40,6 @@ function packString(s: Buffer | string): Buffer {
   return Buffer.concat([len, buf]);
 }
 
-// FIX: Les champs IP et MAC ne peuvent pas être des buffers vides.
-// Le protocole Samsung attend des valeurs base64 valides même si la TV
-// ne les vérifie pas toutes. On utilise des valeurs fictives stables.
 function buildAuthPacket(): Buffer {
   const fakeIp  = Buffer.from('192.168.1.1').toString('base64');
   const fakeMac = Buffer.from('00-00-00-00-00-00').toString('base64');
@@ -102,14 +96,11 @@ const authorizedIps = new Set<string>();
 const STATUS_MAP: Record<number, TVAuthResponse['status']> = {
   0x00: 'allowed',
   0x01: 'denied',
-  0x02: 'allowed', // certains modèles
-  0x0a: 'waiting', // popup TV en cours
+  0x02: 'allowed',
+  0x0a: 'waiting',
   0x64: 'allowed',
 };
 
-// FIX: parseMessages filtre maintenant sur APP_ID = 'iapp.samsung' qui est
-// ce que la TV renvoie réellement — l'ancien filtre sur 'gaminmgr.001'
-// ne matchait jamais, rendant la détection du statut d'auth aveugle.
 function parseMessages(data: Buffer): TVAuthResponse[] {
   const messages: TVAuthResponse[] = [];
   let offset = 0;
@@ -125,11 +116,6 @@ function parseMessages(data: Buffer): TVAuthResponse[] {
     const payloadLen = data.readUInt16LE(payloadLenOffset);
     const payloadStart = payloadLenOffset + 2;
 
-    // FIX: Si payloadLen dépasse le buffer restant, on ne break pas —
-    // on lit quand même le statusByte (payload[0]) qui est toujours présent.
-    // Le message "allowed" de Samsung a payloadLen=0x0064 (100) mais
-    // le buffer réel ne contient que 2 bytes de payload : statusByte + 0x00.
-    // C'est un bug du firmware Samsung : payloadLen annoncé != payload réel.
     const availablePayload = data.slice(
       payloadStart,
       Math.min(payloadStart + payloadLen, data.length)
@@ -147,7 +133,6 @@ function parseMessages(data: Buffer): TVAuthResponse[] {
         : 'no_response',
     });
 
-    // Si payloadLen était tronqué, on a consommé tout le buffer
     if (payloadStart + payloadLen > data.length) break;
     offset = payloadStart + payloadLen;
   }
@@ -160,11 +145,6 @@ export function initAuthorizedIps(ips: string[]): void {
   console.log(`[TV] ${ips.length} IP(s) pré-autorisées:`, ips);
 }
 
-// FIX: Suppression du paramètre waitForAuth — on attend toujours l'auth.
-// L'ancienne logique waitForAuth=false dans turnOffTV était dangereuse :
-// la TV peut ignorer les commandes reçues avant la fin du handshake.
-// À la place, on mémorise les IPs déjà autorisées pour ne plus attendre
-// le popup si la TV nous connaît déjà (reconnexion instantanée).
 function getConnection(tvIp: string): Promise<TVConnection> {
   return new Promise((resolve, reject) => {
     const existing = connections.get(tvIp);
@@ -176,8 +156,6 @@ function getConnection(tvIp: string): Promise<TVConnection> {
     const conn: TVConnection = { socket, ready: false, queue: [], authResponse: null };
     connections.set(tvIp, conn);
 
-    // Si l'IP est déjà autorisée (connexion précédente acceptée par la TV),
-    // on n'attend pas le popup — la TV répond 'allowed' quasi instantanément.
     const isKnown = authorizedIps.has(tvIp);
     const authTimeout = isKnown ? 3_000 : 35_000;
 
@@ -204,7 +182,6 @@ function getConnection(tvIp: string): Promise<TVConnection> {
       const data = Buffer.concat(chunks);
       const messages = parseMessages(data);
 
-      // FIX: On filtre sur APP_ID = 'iapp.samsung' (réponse réelle de la TV)
       const ourMessages = messages.filter(m => m.utf8 === APP_ID);
       const msg = ourMessages[ourMessages.length - 1];
       if (!msg) return;
@@ -213,7 +190,6 @@ function getConnection(tvIp: string): Promise<TVConnection> {
       console.log(`[TV ${tvIp}] Auth: status=${msg.status} (0x${msg.statusByte?.toString(16)})`);
 
       if (msg.status === 'waiting') {
-        // La TV attend l'approbation de l'utilisateur — on continue d'écouter
         return;
       }
 
@@ -270,11 +246,8 @@ export async function sendKey(tvIp: string, key: string): Promise<void> {
   });
 }
 
-// FIX: turnOffTV utilise maintenant getConnection() standard avec auth complète.
-// Avant, waitForAuth=false envoyait la commande sans attendre la confirmation,
-// ce qui causait des échecs silencieux si la TV n'avait pas encore autorisé.
 export async function turnOffTV(tvIp: string): Promise<void> {
-  await sendKey(tvIp, 'KEY_POWER');
+  await sendKey(tvIp, 'KEY_POWEROFF');
 }
 
 export async function pairTV(tvIp: string): Promise<TVAuthResponse | null> {
@@ -282,7 +255,6 @@ export async function pairTV(tvIp: string): Promise<TVAuthResponse | null> {
   if (existing) {
     existing.socket.destroy();
     connections.delete(tvIp);
-    // Aussi retirer des IPs autorisées pour forcer un nouveau popup
     authorizedIps.delete(tvIp);
   }
 

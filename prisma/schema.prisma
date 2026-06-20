@@ -7,19 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Client {
-  id              String     @id @default(cuid())
-  nom             String
-  prenom          String
-  telephone       String?
-  email           String?    @unique
-  dateInscription DateTime   @default(now())
-  sessions        Session[]
-  paiements       Paiement[]
-
-  @@map("clients")
-}
-
 model Machine {
   id        String    @id @default(cuid())
   nom       String
@@ -36,16 +23,15 @@ model Machine {
 
 model Session {
   id           String    @id @default(cuid())
-  clientId     String
-  client       Client    @relation(fields: [clientId], references: [id])
   machineId    String
   machine      Machine   @relation(fields: [machineId], references: [id])
   debut        DateTime  @default(now())
   fin          DateTime?
-  dureePrevu   Int?
+  dureePrevu   Int
   dureeMinutes Int?
   montant      Float?
   statut       String    @default("EN_COURS")
+  lastHeartbeat DateTime @default(now())
   paiement     Paiement?
   createdAt    DateTime  @default(now())
 
@@ -56,13 +42,12 @@ model Paiement {
   id               String   @id @default(cuid())
   sessionId        String   @unique
   session          Session  @relation(fields: [sessionId], references: [id])
-  clientId         String
-  client           Client   @relation(fields: [clientId], references: [id])
   montant          Float
   methode          String
   statut           String   @default("EN_ATTENTE")
+  telephone        String?
   referenceFeexPay String?
-  tokenFeexPay     String?
+  network          String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

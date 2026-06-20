@@ -4,9 +4,8 @@ import { calculerMontant } from "@/lib/utils";
 import { turnOffTV } from "@/lib/tv-control";
 import { emitMachineUpdate } from "@/lib/tv-events";
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { methode } = await req.json();
 
   const session = await prisma.session.findUnique({
     where: { id },
@@ -21,26 +20,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const montant = calculerMontant(session.machine.prixHeure, dureeMinutes);
 
   await prisma.$transaction([
-    prisma.session.update({
-      where: { id },
-      data: { fin, dureeMinutes, montant, statut: "TERMINEE" },
-    }),
-    prisma.machine.update({
-      where: { id: session.machineId },
-      data: { statut: "DISPONIBLE" },
-    }),
-    prisma.paiement.create({
-      data: {
-        sessionId: id,
-        clientId: session.clientId,
-        montant,
-        methode: methode ?? "CASH",
-        statut: methode === "FEEXPAY" ? "EN_ATTENTE" : "PAYE",
-      },
-    }),
+    prisma.session.update({ where: { id }, data: { fin, dureeMinutes, montant, statut: "TERMINEE" } }),
+    prisma.machine.update({ where: { id: session.machineId }, data: { statut: "DISPONIBLE" } }),
   ]);
 
-  // Notifier la page TV (elle passe en écran de veille)
+  if (session.machine.tvIp) turnOffTV(session.machine.tvIp).catch(() => {});
+
   emitMachineUpdate({
     machineId: session.machineId,
     statut: "DISPONIBLE",
@@ -48,11 +33,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     machineType: session.machine.type,
     session: null,
   });
-
-  // Éteindre la TV physiquement (best effort)
-  if (session.machine.tvIp) {
-    turnOffTV(session.machine.tvIp, (session.machine as any).tvToken ?? null).catch(() => {});
-  }
 
   return NextResponse.json({ ok: true, montant, dureeMinutes });
 }

@@ -12,7 +12,6 @@ export default async function TVPage({ params }: { params: Promise<{ machineId: 
     include: {
       sessions: {
         where: { statut: "EN_COURS" },
-        include: { client: { select: { nom: true, prenom: true } } },
         take: 1,
       },
     },
@@ -28,7 +27,7 @@ export default async function TVPage({ params }: { params: Promise<{ machineId: 
     machineName: machine.nom,
     machineType: machine.type,
     session: active
-      ? { id: active.id, debut: active.debut.toISOString(), dureePrevu: active.dureePrevu ?? null, client: active.client }
+      ? { id: active.id, debut: active.debut.toISOString(), dureePrevu: active.dureePrevu ?? null }
       : null,
   };
 

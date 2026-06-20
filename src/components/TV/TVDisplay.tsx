@@ -99,7 +99,7 @@ export default function TVDisplay({
         <div className="text-center opacity-30">
           <p className="text-9xl mb-6">{icon}</p>
           <h2 className="text-3xl font-semibold text-white">{state.machineName}</h2>
-          <p className="text-xl text-gray-500 mt-3">En attente d'un client…</p>
+          <p className="text-xl text-gray-500 mt-3">En attente d&apos;une session…</p>
         </div>
       </div>
     );
@@ -135,9 +135,9 @@ export default function TVDisplay({
         <h2 className="text-2xl font-semibold text-gray-400">{state.machineName}</h2>
       </div>
 
-      {/* Nom client */}
+      {/* Nom machine */}
       <h1 className="text-6xl font-bold text-white mb-10">
-        {session.client.prenom} {session.client.nom}
+        {state.machineName}
       </h1>
 
       {/* Timer */}

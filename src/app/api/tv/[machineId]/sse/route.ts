@@ -13,7 +13,6 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ machin
     include: {
       sessions: {
         where: { statut: 'EN_COURS' },
-        include: { client: { select: { nom: true, prenom: true } } },
         take: 1,
       },
     },
@@ -41,7 +40,6 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ machin
               id: activeSession.id,
               debut: activeSession.debut.toISOString(),
               dureePrevu: (activeSession as any).dureePrevu ?? null,
-              client: activeSession.client,
             }
           : null,
       };

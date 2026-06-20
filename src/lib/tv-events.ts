@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -18,7 +18,10 @@ export type TVMachineEvent = {
     id: string;
     debut: string;
     dureePrevu: number | null;
-    client: { nom: string; prenom: string };
+  } | null;
+  pendingPayment?: {
+    sessionId: string;
+    montant: number;
   } | null;
 };
 
