@@ -31,6 +31,9 @@ model Session {
   dureeMinutes Int?
   montant      Float?
   statut       String    @default("EN_COURS")
+  /// Vestige de l'ancien mécanisme de reprise après crash. Plus lu ni écrit :
+  /// l'échéance d'une session se déduit de `debut + dureePrevu`. Colonne conservée
+  /// pour éviter une reconstruction de table SQLite ; supprimable à la prochaine migration.
   lastHeartbeat DateTime @default(now())
   paiement     Paiement?
   createdAt    DateTime  @default(now())

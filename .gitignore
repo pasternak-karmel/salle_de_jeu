@@ -13,6 +13,10 @@
 # Production
 /build
 
+# Database (SQLite locale — ne jamais versionner les données réelles)
+prisma/*.db
+prisma/*.db-journal
+
 # Environment variables
 .env
 .env.local

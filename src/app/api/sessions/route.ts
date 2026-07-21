@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { wakeOnLan, turnOffTV, initAuthorizedIps } from "@/lib/tv-control";
+import { wakeOnLan } from "@/lib/tv-control";
 import { emitMachineUpdate } from "@/lib/tv-events";
-import { calculerMontant } from "@/lib/utils";
-
-prisma.machine
-  .findMany({ where: { tvIp: { not: null } }, select: { tvIp: true } })
-  .then((machines) => {
-    const ips = machines.map((m) => m.tvIp).filter(Boolean) as string[];
-    if (ips.length) initAuthorizedIps(ips);
-  })
-  .catch(console.error);
 
 export async function GET() {
   const sessions = await prisma.session.findMany({
@@ -35,17 +26,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Durée invalide (1-480 minutes)" }, { status: 400 });
   }
 
-  const machine = await prisma.machine.findUnique({ where: { id: machineId } });
-  if (!machine || machine.statut !== "DISPONIBLE") {
+  // Réservation atomique de la machine : cet updateMany conditionnel sert de verrou.
+  // Sans lui, deux requêtes simultanées pouvaient ouvrir deux sessions sur le même poste.
+  const { count } = await prisma.machine.updateMany({
+    where: { id: machineId, statut: "DISPONIBLE" },
+    data: { statut: "OCCUPEE" },
+  });
+  if (count === 0) {
     return NextResponse.json({ error: "Machine non disponible" }, { status: 409 });
   }
 
-  const [session] = await prisma.$transaction([
-    prisma.session.create({
-      data: { machineId, dureePrevu: duree },
-    }),
-    prisma.machine.update({ where: { id: machineId }, data: { statut: "OCCUPEE" } }),
-  ]);
+  const machine = await prisma.machine.findUniqueOrThrow({ where: { id: machineId } });
+
+  let session;
+  try {
+    session = await prisma.session.create({ data: { machineId, dureePrevu: duree } });
+  } catch (err) {
+    // Machine réservée mais session non créée : on relâche le verrou.
+    await prisma.machine.update({ where: { id: machineId }, data: { statut: "DISPONIBLE" } });
+    throw err;
+  }
 
   if (machine.tvMac) wakeOnLan(machine.tvMac).catch(() => {});
 
@@ -57,35 +57,8 @@ export async function POST(req: NextRequest) {
     session: { id: session.id, debut: session.debut.toISOString(), dureePrevu: duree },
   });
 
-  const delayMs = duree * 60 * 1000;
-  setTimeout(async () => {
-    try {
-      const s = await prisma.session.findUnique({ where: { id: session.id } });
-      if (!s || s.statut !== "EN_COURS") return;
-
-      const fin = new Date();
-      const dureeMinutes = Math.ceil((fin.getTime() - new Date(s.debut).getTime()) / 60000);
-      const montant = calculerMontant(machine.prixHeure, dureeMinutes);
-
-      await prisma.$transaction([
-        prisma.session.update({ where: { id: session.id }, data: { fin, dureeMinutes, montant, statut: "TERMINEE" } }),
-        prisma.machine.update({ where: { id: machineId }, data: { statut: "DISPONIBLE" } }),
-      ]);
-
-      if (machine.tvIp) turnOffTV(machine.tvIp).catch(() => {});
-
-      emitMachineUpdate({
-        machineId,
-        statut: "DISPONIBLE",
-        machineName: machine.nom,
-        machineType: machine.type,
-        session: null,
-        pendingPayment: { sessionId: session.id, montant },
-      });
-    } catch (err) {
-      console.error("Erreur auto-termination:", err);
-    }
-  }, delayMs);
+  // La clôture à échéance est assurée par la boucle de contrôle
+  // (src/lib/session-scheduler.ts), et non par un setTimeout en mémoire.
 
   return NextResponse.json(session, { status: 201 });
 }

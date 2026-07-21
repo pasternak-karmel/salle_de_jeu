@@ -39,7 +39,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ machin
           ? {
               id: activeSession.id,
               debut: activeSession.debut.toISOString(),
-              dureePrevu: (activeSession as any).dureePrevu ?? null,
+              dureePrevu: activeSession.dureePrevu,
             }
           : null,
       };

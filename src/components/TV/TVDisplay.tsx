@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { TVMachineEvent } from "@/lib/tv-events";
 
 const TYPE_ICONS: Record<string, string> = {
@@ -26,9 +26,7 @@ export default function TVDisplay({
   initialEvent: TVMachineEvent;
 }) {
   const [state, setState] = useState<TVMachineEvent>(initialEvent);
-  const [remaining, setRemaining] = useState<number | null>(null); // secondes restantes
-  const [elapsed, setElapsed] = useState(0);                        // secondes écoulées (si pas de durée prévue)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const [showEnd, setShowEnd] = useState(false);
 
   // Connexion SSE
@@ -47,35 +45,12 @@ export default function TVDisplay({
     return () => es.close();
   }, [machineId]);
 
-  // Timer : compte à rebours si dureePrevu, sinon chrono montant
+  // Une seule horloge qui avance ; `elapsed` et `remaining` en sont dérivés au
+  // rendu. Rien à réinitialiser quand la session change : la dérivation suit.
   useEffect(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-
-    if (state.session?.debut) {
-      const start = new Date(state.session.debut).getTime();
-      const dureePrevu = state.session.dureePrevu; // en minutes
-
-      const tick = () => {
-        const elapsedSec = Math.floor((Date.now() - start) / 1000);
-        if (dureePrevu) {
-          const totalSec = dureePrevu * 60;
-          const rem = Math.max(0, totalSec - elapsedSec);
-          setRemaining(rem);
-        } else {
-          setElapsed(elapsedSec);
-          setRemaining(null);
-        }
-      };
-
-      tick();
-      timerRef.current = setInterval(tick, 1000);
-    } else {
-      setElapsed(0);
-      setRemaining(null);
-    }
-
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [state.session?.debut, state.session?.dureePrevu]);
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // Écran de fin de session
   if (showEnd) {
@@ -107,9 +82,15 @@ export default function TVDisplay({
 
   // Couleur du compte à rebours selon le temps restant
   const { session } = state;
+  const startMs = new Date(session.debut).getTime();
+  const elapsed = Math.max(0, Math.floor((now - startMs) / 1000));
+  const remaining = session.dureePrevu
+    ? Math.max(0, session.dureePrevu * 60 - elapsed)
+    : null;
+
   const hasCountdown = remaining !== null;
-  const isUrgent = hasCountdown && remaining! <= 60;       // dernière minute → rouge
-  const isWarning = hasCountdown && remaining! <= 5 * 60;  // 5 dernières minutes → orange
+  const isUrgent = hasCountdown && remaining <= 60;       // dernière minute → rouge
+  const isWarning = hasCountdown && remaining <= 5 * 60;  // 5 dernières minutes → orange
 
   const timerColor = isUrgent
     ? "#EF4444"
@@ -117,7 +98,7 @@ export default function TVDisplay({
     ? "#F59E0B"
     : "#A78BFA"; // violet par défaut
 
-  const displayTime = hasCountdown ? formatTimer(remaining!) : formatTimer(elapsed);
+  const displayTime = hasCountdown ? formatTimer(remaining) : formatTimer(elapsed);
 
   return (
     <div className="fixed inset-0 z-[9999] bg-[#0f0f1a] flex flex-col items-center justify-center select-none">
@@ -141,9 +122,12 @@ export default function TVDisplay({
       </h1>
 
       {/* Timer */}
+      {/* suppressHydrationWarning : l'heure du serveur et celle du client
+          diffèrent forcément de quelques secondes au premier rendu. */}
       <div
         className="font-mono text-9xl font-extrabold tracking-widest mb-4 transition-colors duration-500"
         style={{ color: timerColor }}
+        suppressHydrationWarning
       >
         {displayTime}
       </div>
