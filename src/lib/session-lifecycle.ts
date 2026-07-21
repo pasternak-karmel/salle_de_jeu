@@ -12,15 +12,53 @@
 
 import { prisma } from "@/lib/prisma";
 import { calculerMontant } from "@/lib/utils";
-import { turnOffTV } from "@/lib/tv-control";
+import {
+  samsungPowerOff,
+  rokuPowerOff,
+  detectTVType,
+  type TVType,
+} from "@/lib/tv-control";
 import { emitMachineUpdate } from "@/lib/tv-events";
 
 type SessionAvecMachine = {
   id: string;
   machineId: string;
   debut: Date;
-  machine: { nom: string; type: string; prixHeure: number; tvIp: string | null };
+  machine: {
+    nom: string;
+    type: string;
+    prixHeure: number;
+    tvIp: string | null;
+    tvType: string | null;
+  };
 };
+
+/**
+ * Éteint la TV du poste selon sa marque.
+ *
+ * Samsung et Roku parlent des protocoles incompatibles : les Roku ignoraient
+ * l'ordre Samsung, d'où les écrans qui restaient allumés. Si la marque n'est pas
+ * encore connue (`tvType === null`), on la détecte une fois puis on la mémorise
+ * pour éviter de re-sonder à chaque fin de session.
+ *
+ * Volontairement « fire and forget » : une TV injoignable ne doit jamais bloquer
+ * la clôture d'une session ni la libération du poste.
+ */
+async function eteindreTV(machineId: string, tvIp: string, tvTypeConnu: string | null): Promise<void> {
+  let tvType = tvTypeConnu as TVType | null;
+
+  if (!tvType) {
+    tvType = await detectTVType(tvIp);
+    await prisma.machine
+      .update({ where: { id: machineId }, data: { tvType } })
+      .catch(() => {}); // la mémorisation est un bonus, pas un prérequis
+  }
+
+  const eteindre = tvType === "ROKU" ? rokuPowerOff : samsungPowerOff;
+  await eteindre(tvIp).catch((err) => {
+    console.error(`[TV] Échec extinction ${tvIp} (${tvType}):`, err);
+  });
+}
 
 export type ResultatCloture = {
   dureeMinutes: number;
@@ -58,7 +96,9 @@ export async function cloturerSession(
     data: { statut: "DISPONIBLE" },
   });
 
-  if (session.machine.tvIp) turnOffTV(session.machine.tvIp).catch(() => {});
+  if (session.machine.tvIp) {
+    void eteindreTV(session.machineId, session.machine.tvIp, session.machine.tvType);
+  }
 
   emitMachineUpdate({
     machineId: session.machineId,

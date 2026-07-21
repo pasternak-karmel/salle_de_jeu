@@ -16,6 +16,9 @@ model Machine {
   tvMac     String?
   tvIp      String?
   tvToken   String?
+  /// Marque de la TV : "SAMSUNG" (TCP 55000) ou "ROKU" (ECP HTTP 8060).
+  /// null = auto-détection à la première extinction, puis mémorisé.
+  tvType    String?
   sessions  Session[]
 
   @@map("machines")

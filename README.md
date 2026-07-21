@@ -70,10 +70,20 @@ est idempotente : deux appels concurrents ne peuvent pas facturer deux fois.
 
 ## Contrôle des TV
 
-Les postes équipés d'une TV Samsung (protocole legacy, TCP port 55000) sont
-allumés en Wake-on-LAN au démarrage de la session et éteints à sa clôture.
-L'appairage se fait une fois par poste via `POST /api/tv/[machineId]/pair`
-(accepter le popup affiché sur la TV).
+Les postes équipés d'une TV sont allumés en Wake-on-LAN au démarrage de la
+session (via `tvMac`) et éteints à sa clôture (via `tvIp`).
+
+Deux marques sont gérées, l'extinction étant routée selon le champ `tvType` :
+
+| Marque | Protocole | Appairage |
+|--------|-----------|-----------|
+| **Samsung** | TCP legacy, port 55000 | Oui — `POST /api/tv/[machineId]/pair`, accepter le popup sur la TV |
+| **Roku** | ECP (HTTP), port 8060 | Aucun |
+
+Si `tvType` n'est pas renseigné (« Auto-détection » dans le formulaire), la
+marque est détectée à la première extinction — une TV qui répond sur l'endpoint
+ECP `http://<ip>:8060/query/device-info` est un Roku, sinon on retombe sur
+Samsung — puis mémorisée pour ne plus re-sonder ensuite.
 
 ## Structure
 

@@ -246,8 +246,45 @@ export async function sendKey(tvIp: string, key: string): Promise<void> {
   });
 }
 
-export async function turnOffTV(tvIp: string): Promise<void> {
+/** Extinction d'une TV Samsung (protocole legacy TCP 55000). */
+export async function samsungPowerOff(tvIp: string): Promise<void> {
   await sendKey(tvIp, 'KEY_POWEROFF');
+}
+
+// ─── Roku ECP (External Control Protocol — HTTP port 8060) ───────────────────
+//
+// Les TV Roku ignorent totalement le protocole Samsung. Elles se pilotent en
+// HTTP : une simple requête POST suffit, sans appairage ni token.
+
+const ROKU_PORT = 8060;
+
+/** Extinction d'une TV Roku via ECP. La TV doit être allumée (ce qui est le cas
+ *  en fin de session). Met la TV en veille. */
+export async function rokuPowerOff(tvIp: string): Promise<void> {
+  const res = await fetch(`http://${tvIp}:${ROKU_PORT}/keypress/PowerOff`, {
+    method: 'POST',
+    signal: AbortSignal.timeout(4_000),
+  });
+  if (!res.ok) throw new Error(`Roku PowerOff — HTTP ${res.status}`);
+}
+
+export type TVType = 'SAMSUNG' | 'ROKU';
+
+/** Détecte la marque d'une TV en interrogeant l'endpoint ECP de Roku.
+ *  Repli sur 'SAMSUNG' si l'hôte ne répond pas en Roku (défaut historique). */
+export async function detectTVType(tvIp: string): Promise<TVType> {
+  try {
+    const res = await fetch(`http://${tvIp}:${ROKU_PORT}/query/device-info`, {
+      signal: AbortSignal.timeout(2_500),
+    });
+    if (res.ok) {
+      const body = await res.text();
+      if (/roku|<device-info/i.test(body)) return 'ROKU';
+    }
+  } catch {
+    // Pas de service ECP → ce n'est pas un Roku (ou il est injoignable).
+  }
+  return 'SAMSUNG';
 }
 
 export async function pairTV(tvIp: string): Promise<TVAuthResponse | null> {

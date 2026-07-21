@@ -38,7 +38,7 @@ export async function terminerSessionsEchues(): Promise<number> {
   const sessions = await prisma.session.findMany({
     where: { statut: "EN_COURS" },
     include: {
-      machine: { select: { nom: true, type: true, prixHeure: true, tvIp: true } },
+      machine: { select: { nom: true, type: true, prixHeure: true, tvIp: true, tvType: true } },
     },
   });
 

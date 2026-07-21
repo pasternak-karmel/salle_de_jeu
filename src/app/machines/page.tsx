@@ -14,6 +14,8 @@ export default async function MachinesPage() {
       statut: true,
       tvMac: true,
       tvIp: true,
+      tvType: true,
+      tvToken: true,
       sessions: {
         where: { statut: 'EN_COURS' },
         take: 1,

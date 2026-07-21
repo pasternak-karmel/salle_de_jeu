@@ -8,7 +8,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const session = await prisma.session.findUnique({
     where: { id },
     include: {
-      machine: { select: { nom: true, type: true, prixHeure: true, tvIp: true } },
+      machine: { select: { nom: true, type: true, prixHeure: true, tvIp: true, tvType: true } },
     },
   });
   if (!session || session.statut !== "EN_COURS") {

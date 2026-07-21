@@ -29,7 +29,9 @@ s'éteint automatiquement à échéance, et le client règle en cash ou Mobile M
 - **Facturation** : arrêt manuel = temps réel écoulé ; arrêt automatique =
   `dureePrevu` exactement, pour qu'une coupure serveur ne surfacture jamais.
 - **Temps réel TV** : SSE via `src/lib/tv-events.ts` (EventEmitter global).
-- **Contrôle TV** : protocole Samsung legacy TCP port 55000, `src/lib/tv-control.ts`.
+- **Contrôle TV** : `src/lib/tv-control.ts`. Extinction routée par `Machine.tvType` :
+  Samsung (TCP 55000) ou Roku (ECP HTTP 8060). `tvType` null = auto-détection
+  à la première extinction, puis mémorisé. Allumage commun via Wake-on-LAN.
 
 ## Design system
 - Polices : Chakra Petch (UI), Russo One (titres, via `.font-display`)
