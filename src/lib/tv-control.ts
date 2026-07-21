@@ -265,6 +265,15 @@ export async function rokuPowerOff(tvIp: string): Promise<void> {
     method: 'POST',
     signal: AbortSignal.timeout(4_000),
   });
+  if (res.status === 403) {
+    // La Roku refuse toute commande réseau tant que le contrôle externe n'est pas
+    // autorisé. Réglage TV : Paramètres → Système → Paramètres système avancés →
+    // Contrôle par les applications mobiles → Accès réseau → « Permissif ».
+    throw new Error(
+      `Roku PowerOff — HTTP 403 : contrôle réseau désactivé sur la TV ${tvIp}. ` +
+        `Régler « Accès réseau » sur « Permissif » dans les paramètres Roku.`,
+    );
+  }
   if (!res.ok) throw new Error(`Roku PowerOff — HTTP ${res.status}`);
 }
 
