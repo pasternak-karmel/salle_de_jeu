@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { wakeOnLan } from "@/lib/tv-control";
+import { allumerTV } from "@/lib/tv-control";
 import { emitMachineUpdate } from "@/lib/tv-events";
 
 export async function GET() {
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     throw err;
   }
 
-  if (machine.tvMac) wakeOnLan(machine.tvMac).catch(() => {});
+  void allumerTV(machine); // best effort, ne bloque pas la réponse
 
   emitMachineUpdate({
     machineId,

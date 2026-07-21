@@ -70,15 +70,19 @@ est idempotente : deux appels concurrents ne peuvent pas facturer deux fois.
 
 ## Contrôle des TV
 
-Les postes équipés d'une TV sont allumés en Wake-on-LAN au démarrage de la
-session (via `tvMac`) et éteints à sa clôture (via `tvIp`).
+Les postes équipés d'une TV sont allumés au démarrage de la session et éteints à
+sa clôture. Allumage et extinction sont routés selon le champ `tvType` :
 
-Deux marques sont gérées, l'extinction étant routée selon le champ `tvType` :
+| Marque | Extinction | Allumage | Appairage |
+|--------|-----------|----------|-----------|
+| **Samsung** | TCP legacy port 55000 | Wake-on-LAN (`tvMac`) | Oui — `POST /api/tv/[machineId]/pair`, accepter le popup sur la TV |
+| **Roku** | ECP HTTP port 8060 | ECP `PowerOn` (`tvIp`) | Aucun |
 
-| Marque | Protocole | Appairage |
-|--------|-----------|-----------|
-| **Samsung** | TCP legacy, port 55000 | Oui — `POST /api/tv/[machineId]/pair`, accepter le popup sur la TV |
-| **Roku** | ECP (HTTP), port 8060 | Aucun |
+Deux réglages sont requis sur une TV Roku :
+- **Accès réseau** sur « Permissif » (Paramètres → Système → Paramètres système
+  avancés → Contrôle par les applications mobiles), sinon toute commande renvoie 403.
+- **Démarrage TV rapide** activé, pour que la TV reste joignable en veille et
+  puisse être rallumée par `PowerOn` (le Wake-on-LAN étant peu fiable en WiFi).
 
 Si `tvType` n'est pas renseigné (« Auto-détection » dans le formulaire), la
 marque est détectée à la première extinction — une TV qui répond sur l'endpoint
