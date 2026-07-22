@@ -91,6 +91,7 @@ export default function TVDisplay({
   const hasCountdown = remaining !== null;
   const isUrgent = hasCountdown && remaining <= 60;       // dernière minute → rouge
   const isWarning = hasCountdown && remaining <= 5 * 60;  // 5 dernières minutes → orange
+  const isExpiring = hasCountdown && remaining > 0 && remaining <= 60; // alerte 1 min
 
   const timerColor = isUrgent
     ? "#EF4444"
@@ -101,7 +102,32 @@ export default function TVDisplay({
   const displayTime = hasCountdown ? formatTimer(remaining) : formatTimer(elapsed);
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[#0f0f1a] flex flex-col items-center justify-center select-none">
+    <div
+      className="fixed inset-0 z-[9999] bg-[#0f0f1a] flex flex-col items-center justify-center select-none"
+      style={isExpiring ? { animation: "sdj-flash 1s steps(1) infinite" } : undefined}
+    >
+      {/* Alerte : la session expire dans moins d'une minute */}
+      {isExpiring && (
+        <div
+          className="absolute top-0 left-0 right-0 py-5 text-center"
+          style={{ background: "#EF4444", animation: "sdj-pulse 1s ease-in-out infinite" }}
+        >
+          <p className="text-4xl font-extrabold text-white tracking-wide">
+            ⚠️ La session expire dans {remaining}s
+          </p>
+          <p className="text-xl text-white/90 mt-1">Prévenez le comptoir pour prolonger</p>
+        </div>
+      )}
+
+      {/* Animations locales (pas de dépendance externe) */}
+      <style>{`
+        @keyframes sdj-pulse { 0%,100% { opacity: 1 } 50% { opacity: .55 } }
+        @keyframes sdj-flash {
+          0%, 100% { box-shadow: inset 0 0 0 0 rgba(239,68,68,0) }
+          50%      { box-shadow: inset 0 0 0 12px rgba(239,68,68,.9) }
+        }
+      `}</style>
+
       {/* Badge en cours */}
       <div className="absolute top-8 right-8">
         <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-purple-900/60 border border-purple-600 text-purple-300 text-xl font-semibold">
