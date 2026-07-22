@@ -17,6 +17,9 @@
 prisma/*.db
 prisma/*.db-journal
 
+# Export de données (contient des infos clients : téléphones de paiement)
+prisma/data-export.json
+
 # Environment variables
 .env
 .env.local
