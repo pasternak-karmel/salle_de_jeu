@@ -17,16 +17,6 @@ async function main() {
     });
   }
 
-  const existingClients = await prisma.client.count();
-  if (existingClients === 0) {
-    await prisma.client.createMany({
-      data: [
-        { nom: "Agossou", prenom: "Koffi",    telephone: "+22961234567" },
-        { nom: "Dossou",  prenom: "Mireille", telephone: "+22997654321", email: "mireille@email.com" },
-      ],
-    });
-  }
-
   console.log("Seed terminé.");
 }
 

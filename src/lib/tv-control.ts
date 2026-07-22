@@ -246,8 +246,96 @@ export async function sendKey(tvIp: string, key: string): Promise<void> {
   });
 }
 
-export async function turnOffTV(tvIp: string): Promise<void> {
+/** Extinction d'une TV Samsung (protocole legacy TCP 55000). */
+export async function samsungPowerOff(tvIp: string): Promise<void> {
   await sendKey(tvIp, 'KEY_POWEROFF');
+}
+
+// ─── Roku ECP (External Control Protocol — HTTP port 8060) ───────────────────
+//
+// Les TV Roku ignorent totalement le protocole Samsung. Elles se pilotent en
+// HTTP : une simple requête POST suffit, sans appairage ni token.
+
+const ROKU_PORT = 8060;
+
+/** Extinction d'une TV Roku via ECP. La TV doit être allumée (ce qui est le cas
+ *  en fin de session). Met la TV en veille. */
+export async function rokuPowerOff(tvIp: string): Promise<void> {
+  const res = await fetch(`http://${tvIp}:${ROKU_PORT}/keypress/PowerOff`, {
+    method: 'POST',
+    signal: AbortSignal.timeout(4_000),
+  });
+  if (res.status === 403) {
+    // La Roku refuse toute commande réseau tant que le contrôle externe n'est pas
+    // autorisé. Réglage TV : Paramètres → Système → Paramètres système avancés →
+    // Contrôle par les applications mobiles → Accès réseau → « Permissif ».
+    throw new Error(
+      `Roku PowerOff — HTTP 403 : contrôle réseau désactivé sur la TV ${tvIp}. ` +
+        `Régler « Accès réseau » sur « Permissif » dans les paramètres Roku.`,
+    );
+  }
+  if (!res.ok) throw new Error(`Roku PowerOff — HTTP ${res.status}`);
+}
+
+/** Allumage d'une TV Roku via ECP. Nécessite que la TV reste joignable en veille,
+ *  c.-à-d. l'option « Démarrage TV rapide » activée sur la Roku. */
+export async function rokuPowerOn(tvIp: string): Promise<void> {
+  const res = await fetch(`http://${tvIp}:${ROKU_PORT}/keypress/PowerOn`, {
+    method: 'POST',
+    signal: AbortSignal.timeout(4_000),
+  });
+  if (res.status === 403) {
+    throw new Error(
+      `Roku PowerOn — HTTP 403 : contrôle réseau désactivé sur la TV ${tvIp}. ` +
+        `Régler « Accès réseau » sur « Permissif » dans les paramètres Roku.`,
+    );
+  }
+  if (!res.ok) throw new Error(`Roku PowerOn — HTTP ${res.status}`);
+}
+
+export type TVType = 'SAMSUNG' | 'ROKU';
+
+/**
+ * Allume la TV d'un poste au démarrage d'une session.
+ *
+ * Samsung : Wake-on-LAN (le protocole TCP ne rallume pas une TV éteinte).
+ * Roku    : ECP PowerOn (le WoWLAN étant peu fiable, surtout en WiFi).
+ * Marque inconnue : on tente les deux (Samsung n'écoute pas sur le port 8060,
+ * l'appel ECP échoue donc sans effet de bord). La détection ferme se fait à la
+ * première extinction, qui mémorise `tvType`.
+ *
+ * Best effort : une TV injoignable ne doit jamais bloquer l'ouverture de session.
+ */
+export async function allumerTV(machine: {
+  tvMac: string | null;
+  tvIp: string | null;
+  tvType: string | null;
+}): Promise<void> {
+  const tasks: Promise<unknown>[] = [];
+  if (machine.tvMac) tasks.push(wakeOnLan(machine.tvMac));
+  if (machine.tvIp && machine.tvType !== 'SAMSUNG') tasks.push(rokuPowerOn(machine.tvIp));
+
+  const results = await Promise.allSettled(tasks);
+  for (const r of results) {
+    if (r.status === 'rejected') console.error('[TV] Allumage:', r.reason);
+  }
+}
+
+/** Détecte la marque d'une TV en interrogeant l'endpoint ECP de Roku.
+ *  Repli sur 'SAMSUNG' si l'hôte ne répond pas en Roku (défaut historique). */
+export async function detectTVType(tvIp: string): Promise<TVType> {
+  try {
+    const res = await fetch(`http://${tvIp}:${ROKU_PORT}/query/device-info`, {
+      signal: AbortSignal.timeout(2_500),
+    });
+    if (res.ok) {
+      const body = await res.text();
+      if (/roku|<device-info/i.test(body)) return 'ROKU';
+    }
+  } catch {
+    // Pas de service ECP → ce n'est pas un Roku (ou il est injoignable).
+  }
+  return 'SAMSUNG';
 }
 
 export async function pairTV(tvIp: string): Promise<TVAuthResponse | null> {

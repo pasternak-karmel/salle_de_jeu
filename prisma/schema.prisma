@@ -16,6 +16,9 @@ model Machine {
   tvMac     String?
   tvIp      String?
   tvToken   String?
+  /// Marque de la TV : "SAMSUNG" (TCP 55000) ou "ROKU" (ECP HTTP 8060).
+  /// null = auto-détection à la première extinction, puis mémorisé.
+  tvType    String?
   sessions  Session[]
 
   @@map("machines")
@@ -31,6 +34,9 @@ model Session {
   dureeMinutes Int?
   montant      Float?
   statut       String    @default("EN_COURS")
+  /// Vestige de l'ancien mécanisme de reprise après crash. Plus lu ni écrit :
+  /// l'échéance d'une session se déduit de `debut + dureePrevu`. Colonne conservée
+  /// pour éviter une reconstruction de table SQLite ; supprimable à la prochaine migration.
   lastHeartbeat DateTime @default(now())
   paiement     Paiement?
   createdAt    DateTime  @default(now())

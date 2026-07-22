@@ -4,7 +4,10 @@ import DashboardCharts from "@/components/Dashboard/DashboardCharts";
 import { startOfDay, subDays, startOfMonth } from "date-fns";
 import { Banknote, BarChart3, Timer, Zap, TrendingUp, TrendingDown, Minus } from "lucide-react";
 
-export const revalidate = 30;
+// Tableau de bord temps réel : rendu à chaque requête, comme les autres pages.
+// Avec `revalidate = 30` la page était prérendue au build, ce qui exigeait un
+// accès à la base pendant `next build` et servait des chiffres figés.
+export const dynamic = "force-dynamic";
 
 async function getStats() {
   const now = new Date();

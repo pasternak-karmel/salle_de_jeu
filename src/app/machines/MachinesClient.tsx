@@ -17,6 +17,7 @@ type Machine = {
   statut: string;
   tvMac: string | null;
   tvIp: string | null;
+  tvType?: string | null;
   tvToken?: string | null;
   sessions: {
     id: string;
@@ -43,7 +44,7 @@ export default function MachinesClient({ machines }: { machines: Machine[] }) {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
   const [editMachine, setEditMachine] = useState<Machine | null>(null);
-  const [form, setForm] = useState({ nom: "", type: "PS5", prixHeure: "1500", tvMac: "", tvIp: "" });
+  const [form, setForm] = useState({ nom: "", type: "PS5", prixHeure: "1500", tvMac: "", tvIp: "", tvType: "" });
 
   const dispo    = machines.filter((m) => m.statut === "DISPONIBLE").length;
   const occupees = machines.filter((m) => m.statut === "OCCUPEE").length;
@@ -59,14 +60,15 @@ export default function MachinesClient({ machines }: { machines: Machine[] }) {
       body: JSON.stringify({
         ...form,
         prixHeure: Number(form.prixHeure),
-        tvMac: form.tvMac.trim() || null,
-        tvIp:  form.tvIp.trim()  || null,
+        tvMac:  form.tvMac.trim() || null,
+        tvIp:   form.tvIp.trim()  || null,
+        tvType: form.tvType       || null, // "" = auto-détection
       }),
     });
     setLoading(null);
     setShowForm(false);
     setEditMachine(null);
-    setForm({ nom: "", type: "PS5", prixHeure: "1500", tvMac: "", tvIp: "" });
+    setForm({ nom: "", type: "PS5", prixHeure: "1500", tvMac: "", tvIp: "", tvType: "" });
     router.refresh();
   }
 
@@ -96,13 +98,13 @@ export default function MachinesClient({ machines }: { machines: Machine[] }) {
 
   function openEdit(m: Machine) {
     setEditMachine(m);
-    setForm({ nom: m.nom, type: m.type, prixHeure: String(m.prixHeure), tvMac: m.tvMac ?? "", tvIp: m.tvIp ?? "" });
+    setForm({ nom: m.nom, type: m.type, prixHeure: String(m.prixHeure), tvMac: m.tvMac ?? "", tvIp: m.tvIp ?? "", tvType: m.tvType ?? "" });
     setShowForm(true);
   }
 
   function openCreate() {
     setEditMachine(null);
-    setForm({ nom: "", type: "PS5", prixHeure: "1500", tvMac: "", tvIp: "" });
+    setForm({ nom: "", type: "PS5", prixHeure: "1500", tvMac: "", tvIp: "", tvType: "" });
     setShowForm(true);
   }
 
@@ -153,7 +155,7 @@ export default function MachinesClient({ machines }: { machines: Machine[] }) {
                   </span>
                   {(m.tvMac || m.tvIp) && (
                     <div className="ml-auto flex items-center gap-2">
-                      {m.tvIp && (
+                      {m.tvIp && m.tvType !== "ROKU" && (
                         <button
                           onClick={() => appairer(m.id)}
                           disabled={loading === `pair-${m.id}`}
@@ -251,8 +253,16 @@ export default function MachinesClient({ machines }: { machines: Machine[] }) {
                     <input className="input font-mono" value={form.tvMac} onChange={(e) => setForm({ ...form, tvMac: e.target.value })} placeholder="AA:BB:CC:DD:EE:FF" />
                   </div>
                   <div>
-                    <label className="block text-xs mb-1.5" style={{ color: "#6B7280", fontFamily: "'Chakra Petch', sans-serif" }}>Adresse IP (extinction Samsung)</label>
+                    <label className="block text-xs mb-1.5" style={{ color: "#6B7280", fontFamily: "'Chakra Petch', sans-serif" }}>Adresse IP (extinction TV)</label>
                     <input className="input font-mono" value={form.tvIp} onChange={(e) => setForm({ ...form, tvIp: e.target.value })} placeholder="192.168.1.50" />
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1.5" style={{ color: "#6B7280", fontFamily: "'Chakra Petch', sans-serif" }}>Marque de la TV</label>
+                    <select className="input" value={form.tvType} onChange={(e) => setForm({ ...form, tvType: e.target.value })}>
+                      <option value="">Auto-détection</option>
+                      <option value="SAMSUNG">Samsung</option>
+                      <option value="ROKU">Roku</option>
+                    </select>
                   </div>
                 </div>
               </div>

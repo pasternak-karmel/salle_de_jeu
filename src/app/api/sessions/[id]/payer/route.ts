@@ -78,6 +78,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     try {
       const result = await feexpayGetStatus(reference);
       if (result.status === "SUCCESSFUL") {
+        // Ne jamais marquer PAYE sans vérifier que le montant encaissé correspond
+        // bien à celui dû : un paiement partiel ne doit pas solder la session.
+        if (result.amount < session.montant) {
+          return NextResponse.json(
+            {
+              error: `Montant encaissé insuffisant (${result.amount} FCFA reçus, ${session.montant} FCFA dus)`,
+              status: "MONTANT_INVALIDE",
+            },
+            { status: 409 },
+          );
+        }
         await prisma.paiement.updateMany({
           where: { sessionId: id, referenceFeexPay: reference },
           data: { statut: "PAYE" },
