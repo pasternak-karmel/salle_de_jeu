@@ -1,0 +1,24 @@
+[Unit]
+Description=Salle de jeu — serveur Next.js (gestion + contrôle TV)
+Documentation=file:///home/karmel/Documents/Github/salle_de_jeu/DEPLOY.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/karmel/Documents/Github/salle_de_jeu
+
+# Environnement de production.
+Environment=NODE_ENV=production
+Environment=PORT=3000
+# nvm n'est pas dans le PATH d'un service : on l'ajoute explicitement.
+# ⚠️ Si tu changes de version de Node, mets à jour ces deux chemins (which node).
+Environment=PATH=/home/karmel/.config/nvm/versions/node/v26.5.0/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/karmel/.config/nvm/versions/node/v26.5.0/bin/npm run start
+
+# Redémarrage automatique en cas de crash ou de coupure de courant.
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -15,7 +15,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { cloturerSession } from "@/lib/session-lifecycle";
-import { initAuthorizedIps } from "@/lib/tv-control";
+import { initAuthorizedIps, rokuEstAllumee, rokuPowerOff } from "@/lib/tv-control";
 
 const TICK_MS = 15_000; // résolution de la clôture automatique
 
@@ -65,6 +65,48 @@ export async function terminerSessionsEchues(): Promise<number> {
   return clôturees;
 }
 
+/**
+ * Éteint toute Roku allumée alors qu'aucune session n'est en cours sur son poste.
+ *
+ * Objectif : empêcher qu'un client rallume l'écran à la télécommande pour jouer
+ * sans payer — tout doit passer par l'appli. On n'agit que sur les Roku, dont
+ * l'état d'alimentation est interrogeable (`power-mode`) ; on n'envoie l'ordre
+ * d'extinction que si la dalle est réellement allumée, pour ne pas spammer les
+ * TV déjà en veille.
+ *
+ * Samsung n'est pas surveillé : son protocole ne permet pas de lire l'état
+ * d'alimentation de façon fiable.
+ */
+export async function eteindreTVHorsSession(): Promise<number> {
+  const machines = await prisma.machine.findMany({
+    where: { tvType: "ROKU", tvIp: { not: null } },
+    select: {
+      nom: true,
+      tvIp: true,
+      sessions: { where: { statut: "EN_COURS" }, select: { id: true }, take: 1 },
+    },
+  });
+
+  let eteintes = 0;
+
+  for (const m of machines) {
+    if (!m.tvIp) continue;
+    if (m.sessions.length > 0) continue; // session active → écran légitimement allumé
+
+    if (!(await rokuEstAllumee(m.tvIp))) continue; // déjà en veille → rien à faire
+
+    try {
+      await rokuPowerOff(m.tvIp);
+      eteintes++;
+      console.log(`[TV] Extinction hors-session forcée: ${m.nom} (${m.tvIp})`);
+    } catch (err) {
+      console.error(`[TV] Échec extinction hors-session ${m.tvIp}:`, err);
+    }
+  }
+
+  return eteintes;
+}
+
 /** Pré-charge les IP des TV déjà appairées pour éviter le timeout long au premier envoi. */
 async function chargerIpsTV(): Promise<void> {
   const machines = await prisma.machine.findMany({
@@ -83,6 +125,7 @@ export function startScheduler(): void {
     enCours = true;
     try {
       await terminerSessionsEchues();
+      await eteindreTVHorsSession();
     } catch (err) {
       console.error("[GameZone] Erreur boucle de contrôle:", err);
     } finally {

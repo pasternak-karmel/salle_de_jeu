@@ -11,7 +11,9 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "db:export": "tsx prisma/export-data.ts",
+    "db:import": "tsx prisma/import-data.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",

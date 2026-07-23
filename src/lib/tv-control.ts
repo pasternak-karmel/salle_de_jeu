@@ -295,6 +295,26 @@ export async function rokuPowerOn(tvIp: string): Promise<void> {
 
 export type TVType = 'SAMSUNG' | 'ROKU';
 
+/** Lit le `power-mode` d'une Roku via ECP, ou null si injoignable.
+ *  Valeurs Roku : 'PowerOn' (dalle allumée), 'DisplayOff'/'Ready'/'Headless' (éteinte). */
+export async function rokuPowerMode(tvIp: string): Promise<string | null> {
+  try {
+    const res = await fetch(`http://${tvIp}:${ROKU_PORT}/query/device-info`, {
+      signal: AbortSignal.timeout(2_500),
+    });
+    if (!res.ok) return null;
+    const body = await res.text();
+    return body.match(/<power-mode>([^<]+)<\/power-mode>/)?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Vrai si la dalle de la Roku est réellement allumée (client en train de jouer). */
+export async function rokuEstAllumee(tvIp: string): Promise<boolean> {
+  return (await rokuPowerMode(tvIp)) === 'PowerOn';
+}
+
 /**
  * Allume la TV d'un poste au démarrage d'une session.
  *
