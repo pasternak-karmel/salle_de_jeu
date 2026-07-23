@@ -33,20 +33,31 @@ réseau privé chiffré, sans exposition publique.
 > `/home/karmel/Documents/Github/salle_de_jeu`. Adapte si le PC de la salle est
 > une autre machine (nom d'utilisateur, chemins).
 
+> **Base de données : PostgreSQL hébergé chez Neon.** La salle et le propriétaire
+> lisent/écrivent la **même** base en ligne (une seule source de vérité).
+> ⚠️ Conséquence : le PC de la salle a besoin d'internet pour enregistrer les
+> sessions et paiements. En cas de coupure, le pilotage TV reste local mais la
+> gestion s'arrête tant que la base est injoignable.
+
 ```bash
 cd /home/karmel/Documents/Github/salle_de_jeu
 
-# Dépendances + client Prisma + base à jour
+# Dépendances + client Prisma
 bun install
 bunx prisma generate
-bunx prisma db push        # crée/aligne prisma/dev.db (colonne nullable = sans perte)
 
-# Renseigner les variables (clés FeexPay notamment)
+# Renseigner les variables : DATABASE_URL + DIRECT_URL (Neon), clés FeexPay
 cp -n .env.example .env && nano .env
+
+# Créer le schéma dans la base Neon
+bunx prisma db push
 
 # Build de production
 bun run build
 ```
+
+Voir la section **6. Base de données (Neon)** pour créer le projet et importer
+la configuration des postes.
 
 Vérifie que ça démarre à la main avant d'installer le service :
 
@@ -138,12 +149,58 @@ systemctl --user restart salle-de-jeu
 
 ## 5. Sauvegarde de la base
 
-Toutes les données (postes, sessions, paiements) sont dans un seul fichier :
-`prisma/dev.db`. Il n'est pas versionné. Sauvegarde-le régulièrement :
+La base est hébergée chez Neon, qui conserve un historique de points de
+restauration (fonction *Restore / Time Travel* du dashboard). Pour une
+sauvegarde locale supplémentaire :
 
 ```bash
-cp prisma/dev.db ~/sauvegardes/salle-$(date +%F).db
+# Nécessite pg_dump (paquet postgresql-client)
+pg_dump "$DIRECT_URL" > ~/sauvegardes/salle-$(date +%F).sql
 ```
+
+---
+
+## 6. Base de données (Neon)
+
+### Créer le projet
+
+1. Compte gratuit sur https://neon.tech, puis **New Project** (choisir une région
+   proche, ex. Europe).
+2. Bouton **Connect** → sélectionner **Prisma** : Neon affiche `DATABASE_URL`
+   (avec `-pooler`) et `DIRECT_URL` (sans `-pooler`). Les copier dans `.env`.
+3. Créer le schéma :
+
+   ```bash
+   bunx prisma db push
+   ```
+
+### Importer la configuration existante des postes
+
+Pour ne pas re-saisir les postes et leurs réglages TV (IP, MAC, marque) :
+
+```bash
+# 1. Depuis l'ANCIENNE base SQLite (générée une fois, gitignorée) :
+#    déjà fait → le fichier prisma/data-export.json existe.
+#    (au besoin : DATABASE_URL="file:./dev.db" bun run db:export)
+
+# 2. Vers la NOUVELLE base Neon (DATABASE_URL/DIRECT_URL pointent sur Neon) :
+bun run db:import                 # postes + historique
+# ou, pour ne reprendre que la config des postes :
+bun run db:import -- --machines-only
+```
+
+### Bascule sans perte
+
+La migration SQLite → Neon **remplace** la base de l'appli. Pour éviter de perdre
+une session en cours :
+
+1. Faire la bascule **quand aucune session n'est active**.
+2. `bun run db:export` sur l'ancienne base (capture l'état à jour).
+3. Basculer `.env` sur Neon, `bunx prisma db push`, `bun run db:import`.
+4. `bun run build` puis `systemctl --user restart salle-de-jeu`.
+
+> Tant que la bascule n'est pas faite, ne déploie pas la branche Postgres sur le
+> PC de la salle : l'appli en production continue de tourner sur SQLite.
 
 ---
 
