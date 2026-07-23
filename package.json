@@ -13,7 +13,8 @@
     "db:generate": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
     "db:export": "tsx prisma/export-data.ts",
-    "db:import": "tsx prisma/import-data.ts"
+    "db:import": "tsx prisma/import-data.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",
