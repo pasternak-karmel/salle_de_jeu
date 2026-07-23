@@ -8,7 +8,7 @@ import { fr } from "date-fns/locale";
 import {
   Play, X, Gamepad2, Monitor, Glasses, Joystick, Zap, Star,
   Smartphone, Banknote, Timer, Loader2, CheckCircle2, AlertCircle,
-  Tv, CreditCard,
+  Tv, CreditCard, Plus,
 } from "lucide-react";
 
 type Machine = { id: string; nom: string; type: string; prixHeure: number; statut: string };
@@ -156,6 +156,27 @@ export default function SessionsClient({
     }
   }
 
+  // ── Prolonger une session en cours ──────────────────────────────────────────
+  async function prolonger(session: Session, minutes: number) {
+    setLoading(`prolong-${session.id}`);
+    const res = await fetch(`/api/sessions/${session.id}/prolonger`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ minutes }),
+    });
+    setLoading(null);
+    if (res.ok) {
+      const data = await res.json();
+      setSessions((prev) =>
+        prev.map((s) => (s.id === session.id ? { ...s, dureePrevu: data.dureePrevu } : s)),
+      );
+      router.refresh();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(`❌ ${data.error ?? "Impossible de prolonger la session."}`);
+    }
+  }
+
   // ── Terminer manuellement ───────────────────────────────────────────────────
   async function terminerSession(session: Session) {
     setLoading(session.id);
@@ -217,10 +238,31 @@ export default function SessionsClient({
                     {s.machine.nom}
                   </p>
                   <LiveTimer debut={s.debut} dureePrevu={s.dureePrevu} prixHeure={s.machine.prixHeure} />
+
+                  {/* Ajouter du temps */}
+                  <div className="mt-3">
+                    <p className="text-xs mb-1.5 flex items-center gap-1.5" style={{ color: "#6B7280", fontFamily: "'Chakra Petch', sans-serif" }}>
+                      <Plus size={11} style={{ color: "#A78BFA" }} /> Ajouter du temps
+                    </p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[15, 30, 60].map((min) => (
+                        <button
+                          key={min}
+                          onClick={() => prolonger(s, min)}
+                          disabled={loading === `prolong-${s.id}`}
+                          className="py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all"
+                          style={{ borderColor: "rgba(124,58,237,0.3)", color: "#C4B5FD", background: "rgba(124,58,237,0.08)" }}
+                        >
+                          {loading === `prolong-${s.id}` ? <Loader2 size={11} className="animate-spin mx-auto" /> : `+${min}min`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <button
                     onClick={() => terminerSession(s)}
                     disabled={loading === s.id}
-                    className="mt-3 w-full text-xs py-1.5 rounded-lg border cursor-pointer transition-all duration-150 flex items-center justify-center gap-1.5"
+                    className="mt-2 w-full text-xs py-1.5 rounded-lg border cursor-pointer transition-all duration-150 flex items-center justify-center gap-1.5"
                     style={{ borderColor: "rgba(239,68,68,0.35)", color: "#F87171", background: "rgba(239,68,68,0.06)" }}
                   >
                     {loading === s.id ? <Loader2 size={12} className="animate-spin" /> : <Tv size={12} />}
